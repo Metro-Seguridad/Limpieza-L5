@@ -1,6 +1,6 @@
 // Service worker: permite instalar la app y abrirla sin señal.
 // Siempre intenta traer la versión nueva desde internet; si no hay señal, usa la guardada.
-const CACHE = "limpieza-l5-v1";
+const CACHE = "limpieza-l5-v2";
 const ARCHIVOS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(ARCHIVOS))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
