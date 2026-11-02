@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#00985F">
 <title>Fiscalización Limpieza Línea 5</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -86,6 +91,7 @@ nav .go{background:var(--verde);border-color:var(--verde);color:#fff}
 
 <script>
 /* ===================== CONFIGURACIÓN ===================== */
+const VERSION = "v3";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyA7EcixS1LLWbKX3P76Mp1x_LBbPOSd1o47Lm6pk6017AtY7r_Sb_H1eqq3NLe558R/exec";   // URL /exec de la App web de Apps Script
 
 const SUPERVISORES = ["Darling Oliva Beltrán","Evelyn Torres Ortiz","Gabriela Escudero Lazcano","Gloria Beltrán Carter",
@@ -182,7 +188,7 @@ function bindItems(){
 
 function render(keepScroll){
   $("#prog").innerHTML=STEPS.map((_,i)=>`<i class="${i<cur?"done":i===cur?"now":""}"></i>`).join("");
-  $("#paso").textContent=`Paso ${cur+1} de ${STEPS.length}`;
+  $("#paso").textContent=`Paso ${cur+1} de ${STEPS.length} · ${VERSION}`;
   $("#back").style.visibility=cur?"visible":"hidden";
   const id=STEPS[cur];$("#next").textContent=id==="cierre"?"Enviar fiscalización":"Siguiente";
   const v=$("#view"),y=window.scrollY;let h="";
@@ -331,7 +337,7 @@ function pintarCola(){const n=cola().length,el=$("#pend");el.style.display=n?"bl
   el.innerHTML=n?`${n} fiscalización(es) guardada(s) sin enviar. <button id="reenv" style="padding:6px 10px;margin-left:6px">Enviar ahora</button>`:"";
   if(n)$("#reenv").onclick=reintentar;}
 function post(d){return new Promise((res,rej)=>{
-  if(!SCRIPT_URL||!navigator.onLine)return rej();
+  if(!SCRIPT_URL)return rej("url");if(!navigator.onLine)return rej("red");
   const f=document.createElement("form");f.method="POST";f.action=SCRIPT_URL;f.target="envio";f.style.display="none";
   const i=document.createElement("input");i.type="hidden";i.name="payload";i.value=JSON.stringify(d);f.appendChild(i);
   document.body.appendChild(f);f.submit();setTimeout(()=>{f.remove();res();},2500);});}
@@ -349,10 +355,10 @@ function armar(){const p=puntaje();
     obsGeneral:S.obsGeneral,firma:S.firma||"",fotos:S.fotos};}
 
 async function enviar(){const d=armar();$("#next").disabled=true;$("#next").textContent="Enviando…";
-  let ok=true;try{await post(d);}catch{ok=false;setCola([...cola(),d]);}
+  let ok=true,mot="red";try{await post(d);}catch(er){ok=false;mot=er;setCola([...cola(),d]);}
   document.querySelector("nav").style.display="none";
   $("#view").innerHTML=`<h2>${ok?"Fiscalización enviada":"Guardada en el equipo"}</h2>
-    <p class="sub">${ok?"Registro "+d.id+" enviado.":"Sin conexión o sin URL configurada. Usa “Enviar ahora” cuando tengas señal."}</p>
+    <p class="sub">${ok?"Registro "+esc(d.id)+" enviado.":mot==="url"?"Falta configurar la URL de envío en la app. Avisa al administrador.":"El teléfono está sin internet. Usa “Enviar ahora” cuando tengas señal."}</p>
     <div class="score">${d.total}%</div><p class="sub">${esc(d.estacion)} · ${esc(d.auxNombre)}</p>
     <button id="nueva" class="btn-verde" style="margin-top:16px">Nueva fiscalización</button>`;
   $("#nueva").onclick=()=>{sessionStorage.setItem("fl5_sup",S.supervisor);sessionStorage.setItem("fl5_tur",S.turno);location.reload();};
@@ -364,6 +370,12 @@ $("#back").onclick=()=>{if(cur){cur--;render();}};
 try{S.supervisor=sessionStorage.getItem("fl5_sup")||"";S.turno=sessionStorage.getItem("fl5_tur")||"";}catch{}
 window.addEventListener("online",()=>{if(cola().length)reintentar();});
 pintarCola();render();
+if("serviceWorker" in navigator){
+  let recargado=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(recargado)return;recargado=true;
+    if(STEPS[cur]==="ident"&&!S.estacion)location.reload();});
+  navigator.serviceWorker.register("sw.js").then(r=>r.update()).catch(()=>{});
+}
 </script>
 </body>
 </html>
